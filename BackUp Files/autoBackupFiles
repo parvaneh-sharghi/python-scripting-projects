@@ -1,0 +1,87 @@
+# Importing required modules
+import os  # For interacting with the file system (checking folders, paths)
+import shutil  # For copying entire directory trees
+import datetime  # To generate timestamp for backup folders
+import customtkinter as ctk  # For modern GUI widgets
+from tkinter import filedialog, messagebox  # For folder dialogs and showing messages
+
+# Setting theme and appearance
+ctk.set_appearance_mode("System")  # Follows system light/dark mode
+ctk.set_default_color_theme("blue")  # Sets default color theme to blue
+
+# Function to copy all files/folders from source to destination with a timestamp
+
+def backup_files(source_dir, destination_dir):
+    # If source folder doesn't exist, show an error
+    if not os.path.exists(source_dir):
+        messagebox.showerror("Error", "Source folder does not exist.")
+        return
+
+    # Create destination folder if it doesn't exist
+    if not os.path.exists(destination_dir):
+        os.makedirs(destination_dir)
+
+    # Create a timestamp string to append to the backup folder name
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Define full backup folder path with timestamp
+    backup_folder = os.path.join(destination_dir, f"backup_{timestamp}")
+    # Copy everything from source folder to the new backup folder
+    shutil.copytree(source_dir, backup_folder)
+
+    # Show a message to confirm backup success
+    messagebox.showinfo("Success", f"Backup completed successfully!\nSaved in: {backup_folder}")
+
+# Function to select source folder from dialog
+
+def browse_source():
+    folder_selected = filedialog.askdirectory()  # Open folder selection dialog
+    if folder_selected:
+        source_entry.delete(0, ctk.END)  # Clear existing text
+        source_entry.insert(0, folder_selected)  # Insert selected folder path
+
+# Function to select destination folder from dialog
+
+def browse_destination():
+    folder_selected = filedialog.askdirectory()  # Open folder selection dialog
+    if folder_selected:
+        dest_entry.delete(0, ctk.END)  # Clear existing text
+        dest_entry.insert(0, folder_selected)  # Insert selected folder path
+
+# Function to start backup when button is clicked
+
+def start_backup():
+    src = source_entry.get().strip()  # Get source path from input
+    dst = dest_entry.get().strip()  # Get destination path from input
+    # Check if both fields are filled
+    if not src or not dst:
+        messagebox.showwarning("Warning", "Please select both source and destination folders.")
+        return
+    # Call the backup function
+    backup_files(src, dst)
+
+# Initialize the main GUI window
+app = ctk.CTk()
+app.title("Auto File Backup Tool")  # Set window title
+app.geometry("500x300")  # Set window size
+
+# GUI label and input for source folder
+ctk.CTkLabel(app, text="Select Source Folder:").pack(pady=(20, 0))
+source_frame = ctk.CTkFrame(app)
+source_frame.pack(pady=5)
+source_entry = ctk.CTkEntry(source_frame, width=380)  # Entry box for source path
+source_entry.pack(side="left", padx=5)
+ctk.CTkButton(source_frame, text="Browse", command=browse_source).pack(side="left")  # Browse button
+
+# GUI label and input for destination folder
+ctk.CTkLabel(app, text="Select Destination Folder:").pack(pady=(20, 0))
+dest_frame = ctk.CTkFrame(app)
+dest_frame.pack(pady=5)
+dest_entry = ctk.CTkEntry(dest_frame, width=380)  # Entry box for destination path
+dest_entry.pack(side="left", padx=5)
+ctk.CTkButton(dest_frame, text="Browse", command=browse_destination).pack(side="left")  # Browse button
+
+# Button to start the backup
+ctk.CTkButton(app, text="Start Backup", command=start_backup).pack(pady=30)
+
+# Start the GUI event loop
+app.mainloop()
