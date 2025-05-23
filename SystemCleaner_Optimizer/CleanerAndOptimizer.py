@@ -10,8 +10,10 @@ import time  # For CPU usage measurement
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
 
-# Log file path for cleanup reports
-log_file_path = os.path.join(os.getcwd(), "cleanup_report.txt")
+# Ensure logs are stored in a 'logs' subfolder in the project directory
+log_dir = os.path.join(os.path.dirname(__file__), "logs")
+os.makedirs(log_dir, exist_ok=True)
+log_file_path = os.path.join(log_dir, "cleanup_report.txt")
 
 # Function to write messages to a log file
 def log_report(message):
@@ -130,4 +132,3 @@ ctk.CTkButton(app, text="Show System Info", command=show_system_info).pack(pady=
 ctk.CTkButton(app, text="Exit", command=app.quit).pack(pady=20)
 
 app.mainloop()
-

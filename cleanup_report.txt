@@ -1,8 +1,0 @@
-[2025-05-15 17:53:45] Viewed system info.
-[2025-05-15 18:13:54] Viewed basic system info.
-[2025-05-15 18:16:14] Viewed basic system info.
-[2025-05-15 18:18:32] Viewed detailed system info.
-[2025-05-15 18:23:20] Viewed detailed system info.
-[2025-05-15 18:28:36] Viewed detailed system info.
-[2025-05-22 20:57:39] Viewed detailed system info.
-[2025-05-22 21:47:14] Viewed system info.
