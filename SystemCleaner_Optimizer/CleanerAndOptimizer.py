@@ -6,15 +6,6 @@ from tkinter import messagebox
 import ctypes  # For memory info on Windows
 import datetime
 import time  # For CPU usage measurement
-import clr  # Python.NET for LibreHardwareMonitor access
-
-# Load LibreHardwareMonitorLib
-lib_path = os.path.join(os.getcwd(), 'LibreHardwareMonitorLib.dll')
-if os.path.exists(lib_path):
-    clr.AddReference(r"LibreHardwareMonitorLib")
-    from LibreHardwareMonitor.Hardware import Computer
-else:
-    Computer = None
 
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
@@ -58,7 +49,7 @@ def empty_recycle_bin():
         messagebox.showerror("Error", f"Failed to empty Recycle Bin: {e}")
         log_report(f"Error emptying Recycle Bin: {e}")
 
-# Function to show system info including temperature via LibreHardwareMonitor
+# Function to show system info (without CPU temperature)
 def show_system_info():
     try:
         sys_info = platform.uname()
@@ -111,23 +102,6 @@ def show_system_info():
         total = kernel + user
         cpu_usage = 100 - ((idle * 100) // total if total != 0 else 0)
 
-        cpu_temp = "Unavailable"
-        if Computer:
-            try:
-                computer = Computer()
-                computer.CPUEnabled = True
-                computer.Open()
-                for hardware in computer.Hardware:
-                    if str(hardware.HardwareType) == "CPU":
-                        hardware.Update()
-                        for sensor in hardware.Sensors:
-                            if "temperature" in str(sensor.SensorType).lower():
-                                cpu_temp = f"{sensor.Value:.1f} °C"
-                                break
-                        break
-            except:
-                cpu_temp = "Unavailable"
-
         info = (
             f"System: {sys_info.system}\n"
             f"Node Name: {sys_info.node}\n"
@@ -136,11 +110,10 @@ def show_system_info():
             f"Machine: {sys_info.machine}\n"
             f"Processor: {sys_info.processor}\n"
             f"RAM Usage: {ram_used} MB / {ram_total} MB\n"
-            f"CPU Usage: {cpu_usage}%\n"
-            f"CPU Temperature: {cpu_temp}"
+            f"CPU Usage: {cpu_usage}%"
         )
         messagebox.showinfo("System Info", info)
-        log_report("Viewed detailed system info.")
+        log_report("Viewed system info.")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to fetch system info: {e}")
         log_report(f"Error fetching system info: {e}")
@@ -148,7 +121,7 @@ def show_system_info():
 # GUI setup
 app = ctk.CTk()
 app.title("Lightweight System Cleaner")
-app.geometry("420x430")
+app.geometry("420x400")
 
 ctk.CTkLabel(app, text="System Cleaner (Fast & Light)", font=("Arial", 20)).pack(pady=20)
 ctk.CTkButton(app, text="Clean Temp Files", command=clear_temp).pack(pady=10)
@@ -157,3 +130,4 @@ ctk.CTkButton(app, text="Show System Info", command=show_system_info).pack(pady=
 ctk.CTkButton(app, text="Exit", command=app.quit).pack(pady=20)
 
 app.mainloop()
+
