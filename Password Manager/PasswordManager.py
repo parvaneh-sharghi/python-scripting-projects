@@ -8,8 +8,8 @@ import pyperclip
 from cryptography.fernet import Fernet
 
 # File paths
-DATA_FILE = 'passwords.json'
-KEY_FILE = 'secret.key'
+DATA_FILE = os.path.join(os.path.dirname(__file__), 'passwords.json')
+KEY_FILE = os.path.join(os.path.dirname(__file__), 'secret.key')
 
 # Generate or load encryption key
 def load_key():
@@ -64,36 +64,47 @@ def save_password():
     password_entry.delete(0, tk.END)
     messagebox.showinfo("Success", "Password saved successfully.")
 
-# Retrieve and show password
+# Retrieve and show matching passwords in a grid
 def find_password():
-    website = website_entry.get()
+    website = website_entry.get().strip().lower()
     if not website:
         messagebox.showwarning("Warning", "Please enter a website.")
         return
 
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r') as file:
-            try:
-                data = json.load(file)
-            except json.JSONDecodeError:
-                messagebox.showerror("Error", "Data file is corrupted.")
-                return
-    else:
+    # Clear previous search results
+    for widget in results_frame.winfo_children():
+        widget.destroy()
+
+    if not os.path.exists(DATA_FILE):
         messagebox.showinfo("Info", "No data file found.")
         return
 
-    if website in data:
-        username = data[website]['username']
-        encrypted_password = data[website]['password']
-        try:
-            password = decrypt_message(encrypted_password.encode(), key)
-        except:
-            messagebox.showerror("Error", "Failed to decrypt password.")
-            return
-        messagebox.showinfo(website, f"Username: {username}\nPassword: {password}")
-        pyperclip.copy(password)
-    else:
+    try:
+        with open(DATA_FILE, 'r') as file:
+            data = json.load(file)
+    except json.JSONDecodeError:
+        messagebox.showerror("Error", "Data file is corrupted.")
+        return
+
+    matches = {k: v for k, v in data.items() if website in k.lower()}
+    if not matches:
         messagebox.showinfo("Info", f"No details found for '{website}'.")
+        return
+
+    # Display matching results in a grid
+    tk.Label(results_frame, text="Website", font=("Arial", 10, "bold")).grid(row=0, column=0, padx=5, pady=2)
+    tk.Label(results_frame, text="Username", font=("Arial", 10, "bold")).grid(row=0, column=1, padx=5, pady=2)
+    tk.Label(results_frame, text="Password", font=("Arial", 10, "bold")).grid(row=0, column=2, padx=5, pady=2)
+
+    for i, (site, creds) in enumerate(matches.items(), start=1):
+        try:
+            password = decrypt_message(creds["password"].encode(), key)
+        except:
+            password = "Decryption error"
+
+        tk.Label(results_frame, text=site).grid(row=i, column=0, padx=5, sticky='w')
+        tk.Label(results_frame, text=creds["username"]).grid(row=i, column=1, padx=5, sticky='w')
+        tk.Label(results_frame, text=password).grid(row=i, column=2, padx=5, sticky='w')
 
 # Generate random secure password
 def generate_password():
@@ -126,6 +137,10 @@ password_entry.grid(row=2, column=1)
 tk.Button(window, text="Generate Password", command=generate_password).grid(row=2, column=2)
 tk.Button(window, text="Save", width=36, command=save_password).grid(row=3, column=1, columnspan=2)
 tk.Button(window, text="Search", width=36, command=find_password).grid(row=4, column=1, columnspan=2)
+
+# Frame for displaying search results
+results_frame = tk.Frame(window)
+results_frame.grid(row=5, column=0, columnspan=3, pady=10)
 
 # Load encryption key
 key = load_key()
