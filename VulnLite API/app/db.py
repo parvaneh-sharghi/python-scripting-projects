@@ -2,6 +2,7 @@
 from sqlmodel import SQLModel, Field
 from typing import Optional
 from datetime import datetime
+from typing import AsyncGenerator
 
 # Async database tools from SQLAlchemy
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -30,3 +31,8 @@ class Vulnerability(SQLModel, table=True):
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+
+# Dependency to get a database session
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
