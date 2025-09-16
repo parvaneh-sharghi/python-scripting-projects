@@ -3,9 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from fastapi import HTTPException
 from fastapi import Body
-
-
-
+from .schemas import VulnCreate, VulnRead
 from .db import init_db, get_session, Vulnerability
 
 # Create FastAPI application
@@ -22,23 +20,21 @@ def health():
     return {"ok": True}
 
 # POST endpoint to create a new vulnerability
-@app.post("/vulns")
-async def create_vuln(
-    vuln: Vulnerability,                      # Input body: matches ORM model
-    session: AsyncSession = Depends(get_session),  # Inject DB session
-):
-    session.add(vuln)           # Mark object for INSERT
-    await session.commit()      # Commit the transaction
-    await session.refresh(vuln) # Refresh to get ID and DB-generated values
-    return vuln                 # Return the object as JSON response
+@app.post("/vulns", response_model=VulnRead, status_code=201)
+async def create_vuln(payload: VulnCreate, session: AsyncSession = Depends(get_session)):
+    v = Vulnerability(title=payload.title, severity=payload.severity, notes=payload.notes)
+    session.add(v)
+    await session.commit()
+    await session.refresh(v)
+    return v               # Return the object as JSON response
 
 
-@app.get("/vulns")
+@app.get("/vulns", response_model=list[VulnRead])
 async def list_vulns(session: AsyncSession = Depends(get_session)):
-    # run a SELECT query to fetch all rows
-    result = await session.execute(select(Vulnerability))
-    items = result.scalars().all()  # convert result to list of ORM objects
-    return items                    # FastAPI will return JSON
+    result = await session.execute(select(Vulnerability).where(Vulnerability.archived == False))
+    return result.scalars().all()                   # FastAPI will return JSON
+
+
 
 # Get a single vulnerability by ID
 @app.get("/vulns/{vuln_id}")
