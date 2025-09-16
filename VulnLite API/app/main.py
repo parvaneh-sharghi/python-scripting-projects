@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from fastapi import HTTPException
+from fastapi import Body
+
 
 
 from .db import init_db, get_session, Vulnerability
@@ -49,3 +51,52 @@ async def get_vuln(vuln_id: int, session: AsyncSession = Depends(get_session)):
         # return 404 if not found
         raise HTTPException(status_code=404, detail="Vulnerability not found")
     return vuln
+
+# Update (partial) a vulnerability by ID
+@app.patch("/vulns/{vuln_id}")
+async def update_vuln(
+    vuln_id: int,
+    data: dict = Body(...),                           # JSON body with any fields to update
+    session: AsyncSession = Depends(get_session),
+):
+    # 1) fetch the row
+    result = await session.execute(select(Vulnerability).where(Vulnerability.id == vuln_id))
+    vuln = result.scalars().first()
+    if not vuln:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+
+    # 2) apply only allowed fields
+    allowed = {"title", "severity", "status", "notes", "archived"}
+    for k, v in data.items():
+        if k in allowed:
+            setattr(vuln, k, v)
+
+    # 3) save and return
+    await session.commit()
+    await session.refresh(vuln)
+    return vuln
+
+
+# Delete (soft by default). Use ?hard=true for hard delete.
+@app.delete("/vulns/{vuln_id}")
+async def delete_vuln(
+    vuln_id: int,
+    hard: bool = False,                                # /vulns/1?hard=true
+    session: AsyncSession = Depends(get_session),
+):
+    # 1) fetch the row
+    result = await session.execute(select(Vulnerability).where(Vulnerability.id == vuln_id))
+    vuln = result.scalars().first()
+    if not vuln:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+
+    # 2) soft or hard delete
+    if hard:
+        await session.delete(vuln)                     # hard delete
+        await session.commit()
+        return {"ok": True, "deleted": "hard"}
+    else:
+        vuln.archived = True                           # soft delete (archive)
+        await session.commit()
+        await session.refresh(vuln)
+        return {"ok": True, "deleted": "soft", "item": vuln}
