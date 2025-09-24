@@ -15,3 +15,11 @@ class VulnRead(BaseModel):
     notes: Optional[str] = None
     discovered_at: datetime
     archived: bool
+
+class VulnUpdate(BaseModel):
+    # all fields are optional for partial update
+    title: Optional[str] = None
+    severity: Optional[Literal["low", "medium", "high", "critical"]] = None
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    archived: Optional[bool] = None

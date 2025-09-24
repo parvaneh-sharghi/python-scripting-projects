@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from fastapi import HTTPException
 from fastapi import Body
-from .schemas import VulnCreate, VulnRead
+from .schemas import VulnCreate, VulnRead, VulnUpdate
 from .db import init_db, get_session, Vulnerability
 
 # Create FastAPI application
@@ -49,28 +49,28 @@ async def get_vuln(vuln_id: int, session: AsyncSession = Depends(get_session)):
     return vuln
 
 # Update (partial) a vulnerability by ID
-@app.patch("/vulns/{vuln_id}")
+@app.patch("/vulns/{vuln_id}", response_model=VulnRead)
 async def update_vuln(
-    vuln_id: int,
-    data: dict = Body(...),                           # JSON body with any fields to update
-    session: AsyncSession = Depends(get_session),
+    vuln_id: int,                                 # The ID of the record to update
+    vuln_data: VulnUpdate,                        # Request body with optional fields
+    session: AsyncSession = Depends(get_session)  # Database session
 ):
-    # 1) fetch the row
-    result = await session.execute(select(Vulnerability).where(Vulnerability.id == vuln_id))
-    vuln = result.scalars().first()
-    if not vuln:
+    # 1. Find the record by ID
+    db_vuln = await session.get(Vulnerability, vuln_id)
+    if not db_vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
 
-    # 2) apply only allowed fields
-    allowed = {"title", "severity", "status", "notes", "archived"}
-    for k, v in data.items():
-        if k in allowed:
-            setattr(vuln, k, v)
+    # 2. Update only the fields provided in vuln_data
+    update_data = vuln_data.dict(exclude_unset=True)  # ignore missing fields
+    for key, value in update_data.items():
+        setattr(db_vuln, key, value)
 
-    # 3) save and return
+    # 3. Save changes
     await session.commit()
-    await session.refresh(vuln)
-    return vuln
+    await session.refresh(db_vuln)
+
+    # 4. Return updated record as JSON
+    return db_vuln
 
 
 # Delete (soft by default). Use ?hard=true for hard delete.
