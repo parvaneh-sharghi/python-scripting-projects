@@ -37,16 +37,18 @@ async def list_vulns(session: AsyncSession = Depends(get_session)):
 
 
 # Get a single vulnerability by ID
-@app.get("/vulns/{vuln_id}")
-async def get_vuln(vuln_id: int, session: AsyncSession = Depends(get_session)):
-    result = await session.execute(
-        select(Vulnerability).where(Vulnerability.id == vuln_id)
-    )
-    vuln = result.scalars().first()
-    if not vuln:
-        # return 404 if not found
+@app.get("/vulns/{vuln_id}", response_model=VulnRead)
+async def get_vuln(
+    vuln_id: int,
+    session: AsyncSession = Depends(get_session)
+):
+    # get by Id 
+    db_vuln = await session.get(Vulnerability, vuln_id)
+    if not db_vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
-    return vuln
+
+    # returning JSON
+    return db_vuln
 
 # Update (partial) a vulnerability by ID
 @app.patch("/vulns/{vuln_id}", response_model=VulnRead)
@@ -74,25 +76,23 @@ async def update_vuln(
 
 
 # Delete (soft by default). Use ?hard=true for hard delete.
-@app.delete("/vulns/{vuln_id}")
+@app.delete("/vulns/{vuln_id}", response_model=VulnRead)
 async def delete_vuln(
     vuln_id: int,
-    hard: bool = False,                                # /vulns/1?hard=true
+    hard: bool = False,
     session: AsyncSession = Depends(get_session),
 ):
-    # 1) fetch the row
     result = await session.execute(select(Vulnerability).where(Vulnerability.id == vuln_id))
     vuln = result.scalars().first()
     if not vuln:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
 
-    # 2) soft or hard delete
     if hard:
-        await session.delete(vuln)                     # hard delete
+        await session.delete(vuln)
         await session.commit()
-        return {"ok": True, "deleted": "hard"}
+        return {"ok": True, "deleted": "hard", "item": None}
     else:
-        vuln.archived = True                           # soft delete (archive)
+        vuln.archived = True
         await session.commit()
         await session.refresh(vuln)
         return {"ok": True, "deleted": "soft", "item": vuln}
