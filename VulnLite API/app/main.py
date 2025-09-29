@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from fastapi import Body
 from .schemas import VulnCreate, VulnRead, VulnUpdate
 from .db import init_db, get_session, Vulnerability
+from fastapi.middleware.cors import CORSMiddleware
 
 # Create FastAPI application
 app = FastAPI(title="VulnLite API", version="0.1")
@@ -14,10 +15,20 @@ app = FastAPI(title="VulnLite API", version="0.1")
 async def on_startup():
     await init_db()
 
+
+# CORS (for frontend/Postman consumption)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict to specific domains
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Simple health check endpoint
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"Hello": True}
 
 # POST endpoint to create a new vulnerability
 @app.post("/vulns", response_model=VulnRead, status_code=201)
@@ -66,6 +77,7 @@ async def update_vuln(
     update_data = vuln_data.dict(exclude_unset=True)  # ignore missing fields
     for key, value in update_data.items():
         setattr(db_vuln, key, value)
+
 
     # 3. Save changes
     await session.commit()
