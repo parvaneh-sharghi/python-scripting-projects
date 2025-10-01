@@ -6,7 +6,7 @@ from fastapi import Body
 from .schemas import VulnCreate, VulnRead, VulnUpdate
 from .db import init_db, get_session, Vulnerability
 from fastapi.middleware.cors import CORSMiddleware
-from .crud import create_vuln_db,get_vulns_db, get_vuln_Id_db
+from .crud import create_vuln_db,get_vulns_db, get_vuln_db
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -52,7 +52,7 @@ async def list_vulns(session: AsyncSession = Depends(get_session)):
 @app.get("/vulns/{vuln_id}", response_model=VulnRead)
 async def get_vuln(vuln_id: int,session: AsyncSession = Depends(get_session)
 ):
-    vuln = await get_vuln_Id_db(vuln_id, session)
+    vuln = await get_vuln_db(vuln_id, session)
     if not vuln:
         logger.warning(f"Vulnerability id={vuln_id} not found")
         raise HTTPException(status_code=404, detail="Vulnerability not found")
