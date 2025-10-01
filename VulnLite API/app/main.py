@@ -6,6 +6,11 @@ from fastapi import Body
 from .schemas import VulnCreate, VulnRead, VulnUpdate
 from .db import init_db, get_session, Vulnerability
 from fastapi.middleware.cors import CORSMiddleware
+from .crud import create_vuln_db,get_vulns_db, get_vuln_Id_db
+
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("vulnlite")
 
 # Create FastAPI application
 app = FastAPI(title="VulnLite API", version="0.1")
@@ -28,38 +33,31 @@ app.add_middleware(
 # Simple health check endpoint
 @app.get("/health")
 def health():
-    return {"Hello": True}
+    return {"Check": True}
 
 # POST endpoint to create a new vulnerability
 @app.post("/vulns", response_model=VulnRead, status_code=201)
 async def create_vuln(payload: VulnCreate, session: AsyncSession = Depends(get_session)):
-    v = Vulnerability(title=payload.title, severity=payload.severity, notes=payload.notes)
-    session.add(v)
-    await session.commit()
-    await session.refresh(v)
-    return v               # Return the object as JSON response
+    logger.info(f"Creating vulnerability: {payload.title}")
+    return await create_vuln_db(payload, session)
 
 
 @app.get("/vulns", response_model=list[VulnRead])
 async def list_vulns(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(Vulnerability).where(Vulnerability.archived == False))
-    return result.scalars().all()                   # FastAPI will return JSON
-
+    vulns = await get_vulns_db(session)
+    return vulns                  
 
 
 # Get a single vulnerability by ID
 @app.get("/vulns/{vuln_id}", response_model=VulnRead)
-async def get_vuln(
-    vuln_id: int,
-    session: AsyncSession = Depends(get_session)
+async def get_vuln(vuln_id: int,session: AsyncSession = Depends(get_session)
 ):
-    # get by Id 
-    db_vuln = await session.get(Vulnerability, vuln_id)
-    if not db_vuln:
+    vuln = await get_vuln_Id_db(vuln_id, session)
+    if not vuln:
+        logger.warning(f"Vulnerability id={vuln_id} not found")
         raise HTTPException(status_code=404, detail="Vulnerability not found")
-
-    # returning JSON
-    return db_vuln
+    logger.debug(f"Fetched vulnerability id={vuln_id}")
+    return vuln
 
 # Update (partial) a vulnerability by ID
 @app.patch("/vulns/{vuln_id}", response_model=VulnRead)
